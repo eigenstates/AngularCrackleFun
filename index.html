@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html data-ng-app="demoApp">
+<head>
+	<title>Huh?</title>
+</head>
+<script type="text/javascript">
+
+var appInit = []
+
+function loadReady(obj){
+	appInit.push(obj)
+	if(appInit.length==4){
+		processFood();	
+	}
+
+}
+
+function food(){
+
+	// var config = Crackle.Config.getConfig({
+	// 	cb: function(data){
+	// 		console.log('config');
+	// 		console.log(data)
+	// 	}
+	// 	// body...
+	// })
+
+	movieList = Crackle.API.Content.GenreList('movies', 'primary', {
+		cb:function(data){
+			console.log("MOVIELIST")
+			console.log(data)
+			if(data.status && data.status.messageCode && data.status.messageCode == 0){
+				loadReady({'name':'MovieList', 'data':data.Items});
+			}
+			else{
+				//error
+				var msg = (data.status.message)?data.status.message:"no message"
+				throw new Error('Movie List failed: ' + msg + ' Tried for: movies, primary');
+			}
+
+		}
+	})
+
+	showsList = Crackle.API.Content.GenreList('shows', 'primary', {
+		cb:function(data){
+			console.log("SHOWSLIST")
+			console.log(data)
+			if(data.status && data.status.messageCode && data.status.messageCode == 0){
+				loadReady({'name':'ShowsList', 'data':data.Items});
+			}
+			else{
+				//error
+				var msg = (data.status.message)?data.status.message:"no message"
+				throw new Error('Shows List failed: ' + msg + ' Tried for: shows primary');
+			}
+		}
+	})
+
+	collectionsList = Crackle.API.Content.Browse('collections', 'all', 'All', 'date',{
+		cb:function(data){
+			console.log("COLLECTIONS")
+			console.log(data)
+			if(data.status && data.status.messageCode && data.status.messageCode == 0){
+				loadReady({'name':'CollectionsList', 'data':data.Entries});
+			}
+			else{
+				//error
+				var msg = (data.status.message)?data.status.message:"no message";
+				loadReady({'name':'CollectionsList', 'data':null});
+				throw new Error('Collections List failed: ' + msg + ' Tried for: collections, all, All, date');
+			}
+		}
+	})
+
+	slideShow = Crackle.API.Content.GetSlideShow('home', {
+		cb:function(data){
+			console.log("SLIDESHOW")
+			console.log(data);
+			if(data.status && data.status.messageCode && data.status.messageCode == 0){
+				if(data.slideList && data.slideList.length > 0 ){
+					loadReady({'name':'SlideShow', 'data':data.slideList});
+				}
+			}
+			else{
+				//error
+				var msg = (data.status.message)?data.status.message:"no message";
+				loadReady({'name':'SlideShow', 'data':null});
+				throw new Error('Slideshow failed: ' + msg + ' Tried for: home');
+			}
+		}
+	})
+}
+
+var slides=[];
+var currentFocus;
+function processFood(){
+
+	console.log(appInit)
+	var imgHolder = document.getElementById("images")
+
+	for(var i=0; i<appInit.length;++i){
+		if (appInit[i].name == 'SlideShow'){
+			slides = appInit[i].data.map(function(itemData){
+				return itemData;
+			})
+		}
+	}
+
+	for(var a = 0; a<slides.length; ++a){
+		var imgLine = "<img src='"+ slides[a].slideImage+"'' tabindex='"+a+"' />";
+		var descritpionLine = "<div class='desc'>"+slides[a].slideDescription+"</div>"
+		imgHolder.innerHTML += imgLine+descritpionLine;
+	}
+	
+	currentFocus = imgHolder.firstChild;
+
+	imgHolder.firstChild.focus();
+
+
+}
+
+function keyDown(event){
+	event = event || window.event;
+    var keycode = event.charCode || event.keyCode;
+    switch(keycode){
+    	case 13:
+    		doDetailsPage();
+    		break;
+    	case 37: 
+    	case 39: 
+    	case 38: 
+    	case 40:
+    		doItemSelect(keycode);
+    		break;
+    }
+}
+keys={
+	'up':38,
+	'down':40,
+	'left': 37,
+	'right':39,
+	'triangle':112,
+	'square':32,
+	'circle':8,
+	'cross':13
+}
+
+function doItemSelect(keycode) {
+		
+	if(keycode==38 && currentFocus.previousSibling){
+		currentFocus.previousSibling.focus()
+		currentFocus = currentFocus.previousSibling;
+
+	}
+	else if(keycode == 40 && currentFocus.nextSibling){
+		currentFocus.nextSibling.focus()
+		currentFocus = currentFocus.nextSibling
+	}
+}
+
+function doDetailsPage(){
+	console.log(slides[currentFocus.getAttribute('tabindex')]	)
+	var channel = slides[currentFocus.getAttribute('tabindex')];
+	Crackle.API.Content.GetChannelDetails(channel.appDataID, {
+		cb: function(data){
+			console.log("CHANNEL DETAILS")
+			console.log(data)
+		}
+	})
+}
+
+</script>
+<style type="text/css">
+body {
+	margin: 0;
+	background-color: white;
+}
+img{
+	padding:5px;
+	margin:5px;
+}
+.desc{
+	margin: 5px;
+	padding: 5px;
+}
+img:focus{
+	background-color: orange;
+}
+
+
+</style>
+<body onload='food()' onkeydown='keyDown()'>
+<!-- 	<div class="container" data-ng-controller="DoggieController">
+		Name:
+		<br />
+		<input type='text' data-ng-model="flebber" />
+		<ul>
+			<li data-ng-repeat="dog in doggies | filter:flebber">{{dog.name}} | {{dog.type}}</li>
+		</ul>
+	</div> -->
+	<div id="images"></div>
+	<script src="angular.min.js"></script>
+	<script src="dempApp.js"></script>
+	<script src="SHA.js"></script>
+	<script src="DateFormat.js"></script>
+	<script src="citadel.js"></script>
+</body>
+</html>
